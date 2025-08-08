@@ -53,6 +53,9 @@ end
 ---Open link in browser (platform agnostic)
 ---@param link string
 function M.visit(link)
+  if config.opts.no_open then
+    return
+  end
   local cmd
   if config.opts.open_cmd ~= nil then
     cmd = string.format(config.opts.open_cmd, 'http://' .. link)

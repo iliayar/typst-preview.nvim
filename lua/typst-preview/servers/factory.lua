@@ -10,7 +10,7 @@ local M = {}
 ---@param mode mode
 ---@param callback fun(close: fun(), write: fun(data: string), read: fun(on_read: fun(data: string)), link: string)
 ---Called after server spawn completes
-local function spawn(path, port, mode, callback)
+local function spawn(path, host, data_plane_port, control_plane_port, mode, callback)
   local server_stdout = assert(vim.uv.new_pipe())
   local server_stderr = assert(vim.uv.new_pipe())
   local tinymist_bin = config.opts.dependencies_bin['tinymist']
@@ -23,11 +23,9 @@ local function spawn(path, port, mode, callback)
     mode,
     '--no-open',
     '--data-plane-host',
-    '127.0.0.1:0',
+    host .. ":" .. data_plane_port,
     '--control-plane-host',
-    '127.0.0.1:0',
-    '--static-file-host',
-    '127.0.0.1:' .. port,
+    host .. ":" .. control_plane_port,
     '--root',
     config.opts.get_root(path),
   }
@@ -128,7 +126,7 @@ local function spawn(path, port, mode, callback)
       server_stderr:close()
       -- try again at port + 1
       vim.defer_fn(function()
-        spawn(path, port + 1, mode, callback)
+        spawn(path, host, data_plane_port + 1, control_plane_port, mode, callback)
       end, 0)
     end
     local control_host = find_host(
@@ -177,7 +175,8 @@ end
 function M.new(path, mode, callback)
   local read_buffer = ''
 
-  spawn(path, config.opts.port, mode, function(close, write, read, link)
+  data_plane_port = config.opts.data_plane_port or config.opts.port
+  spawn(path, config.opts.host, data_plane_port, config.opts.control_plane_port, mode, function(close, write, read, link)
     ---@type Server
     local server = {
       path = path,
